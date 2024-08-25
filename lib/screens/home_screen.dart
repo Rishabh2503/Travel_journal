@@ -48,6 +48,36 @@ class HomeScreen extends StatelessWidget {
               }).toList() ??
               [];
 
+          if (entries.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.book, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No travel entries yet',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Start adding your travel memories!',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (context) => JournalEntryScreen()),
+                      );
+                    },
+                    child: const Text('Add New Entry'),
+                  ),
+                ],
+              ),
+            );
+          }
           return ListView.builder(
             itemCount: entries.length,
             itemBuilder: (context, index) {

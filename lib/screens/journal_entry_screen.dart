@@ -72,6 +72,16 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
   }
 
   Future<void> _saveEntry() async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(
+          child: CircularProgressIndicator(),
+        );
+      },
+    );
     final user = FirebaseAuth.instance.currentUser;
     String? imageUrl;
 
@@ -127,6 +137,15 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
           SnackBar(content: Text('Failed to save entry: $e')),
         );
       }
+    }
+    Navigator.of(context).pop();
+
+    // Show success message
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Entry saved successfully')),
+      );
+      Navigator.of(context).pop(); // Return to previous screen
     }
   }
 
