@@ -4,12 +4,8 @@ class JournalEntry {
   final String id;
   final String title;
   final String description;
-  final String imageUrl; // Field for image URL
+  final String imageUrl;
   final DateTime timestamp;
-
-  var date;
-
-  var location;
 
   JournalEntry({
     required this.id,
@@ -21,7 +17,6 @@ class JournalEntry {
 
   factory JournalEntry.fromDocument(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-
     return JournalEntry(
       id: doc.id,
       title: data['title'] ?? '',
@@ -30,4 +25,6 @@ class JournalEntry {
       timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
+
+  get location => null;
 }

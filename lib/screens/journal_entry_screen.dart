@@ -1,16 +1,18 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:latlong2/latlong.dart';
 import 'map_screen.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class JournalEntryScreen extends StatefulWidget {
   final String? entryId;
 
-  JournalEntryScreen({this.entryId});
+  const JournalEntryScreen({super.key, this.entryId});
 
   @override
   _JournalEntryScreenState createState() => _JournalEntryScreenState();
@@ -54,20 +56,9 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
   }
 
   Future<void> _selectLocation() async {
-    LatLng? initialLocation;
-
-    if (_location != null) {
-      final parts = _location!.split(',');
-      initialLocation = LatLng(
-        double.parse(parts[0]),
-        double.parse(parts[1]),
-      );
-    }
-
     final result = await Navigator.of(context).push<Map<String, String>>(
       MaterialPageRoute(
-        builder: (context) =>
-            TravelJournalMapScreen(initialLocation: initialLocation),
+        builder: (context) => const MapScreen(),
       ),
     );
 
@@ -75,7 +66,7 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
       setState(() {
         _location = result['coordinates'];
         // You can also save the location name if needed
-        // String locationName = result['name'];
+        // String? locationName = result['name'];
       });
     }
   }
