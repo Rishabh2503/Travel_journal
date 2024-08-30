@@ -46,3 +46,8 @@ flutter {
     source = "../.."
 }
 apply plugin: 'com.google.gms.google-services'
+dependencies {
+    // Add the Play Integrity dependency
+    implementation 'com.google.firebase:firebase-appcheck-playintegrity:latest_version'
+    // Other dependencies
+}

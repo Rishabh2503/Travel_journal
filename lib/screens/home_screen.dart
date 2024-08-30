@@ -4,12 +4,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:travel/models/journal_entry.dart';
+import 'package:travel/models/user_modal.dart';
 import 'package:travel/screens/auth_screen.dart';
 import 'package:travel/screens/journal_entry_screen.dart';
+import 'package:travel/widgets/app_bar.dart';
 import 'package:travel/widgets/journal_card.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final UserModel user;
+  const HomeScreen({super.key, required this.user});
 
   @override
   Widget build(BuildContext context) {
@@ -17,18 +20,7 @@ class HomeScreen extends StatelessWidget {
     final User? _user = _auth.currentUser;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Travel Journal"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => _showSettingsMenu(context),
-          ),
-          CircleAvatar(
-            backgroundImage: NetworkImage(_user?.photoURL ?? ''),
-          ),
-        ],
-      ),
+      appBar: TravelAppBar(user: user),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('journal_entries')

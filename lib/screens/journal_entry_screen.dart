@@ -71,6 +71,83 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
     }
   }
 
+  // Future<void> _saveEntry() async {
+  //   // Show loading dialog
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (BuildContext context) {
+  //       return const Center(
+  //         child: CircularProgressIndicator(),
+  //       );
+  //     },
+  //   );
+  //   final user = FirebaseAuth.instance.currentUser;
+  //   String? imageUrl;
+
+  //   if (_image != null) {
+  //     final storageRef = FirebaseStorage.instance
+  //         .ref()
+  //         .child('journal_images')
+  //         .child('${user!.uid}/${DateTime.now().millisecondsSinceEpoch}');
+
+  //     final uploadTask = storageRef.putFile(File(_image!.path));
+  //     final snapshot = await uploadTask.whenComplete(() => {});
+
+  //     if (snapshot.state == TaskState.success) {
+  //       imageUrl = await snapshot.ref.getDownloadURL();
+  //     } else {
+  //       if (mounted) {
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           const SnackBar(content: Text('Failed to upload image')),
+  //         );
+  //       }
+  //       return;
+  //     }
+  //   }
+
+  //   final entryData = {
+  //     'title': _titleController.text,
+  //     'description': _descriptionController.text,
+  //     'imageUrl': imageUrl ?? '', // Ensure the imageUrl is not null
+  //     'timestamp': Timestamp.fromDate(DateTime.now()),
+  //     'userId': user!.uid,
+  //     'location': _location ?? '',
+  //   };
+
+  //   try {
+  //     if (widget.entryId == null) {
+  //       await FirebaseFirestore.instance
+  //           .collection('journal_entries')
+  //           .add(entryData);
+  //     } else {
+  //       await FirebaseFirestore.instance
+  //           .collection('journal_entries')
+  //           .doc(widget.entryId)
+  //           .update(entryData);
+  //     }
+
+  //     // Check if the widget is still mounted before calling Navigator.of(context).pop()
+  //     if (mounted) {
+  //       Navigator.of(context).pop();
+  //     }
+  //   } catch (e) {
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text('Failed to save entry: $e')),
+  //       );
+  //     }
+  //   }
+  //   Navigator.of(context).pop();
+
+  //   // Show success message
+  //   if (mounted) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('Entry saved successfully')),
+  //     );
+  //     Navigator.of(context).pop(); // Return to previous screen
+  //   }
+  // }
   Future<void> _saveEntry() async {
     // Show loading dialog
     showDialog(
@@ -82,40 +159,36 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
         );
       },
     );
+
     final user = FirebaseAuth.instance.currentUser;
     String? imageUrl;
 
-    if (_image != null) {
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('journal_images')
-          .child('${user!.uid}/${DateTime.now().millisecondsSinceEpoch}');
-
-      final uploadTask = storageRef.putFile(File(_image!.path));
-      final snapshot = await uploadTask.whenComplete(() => {});
-
-      if (snapshot.state == TaskState.success) {
-        imageUrl = await snapshot.ref.getDownloadURL();
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to upload image')),
-          );
-        }
-        return;
-      }
-    }
-
-    final entryData = {
-      'title': _titleController.text,
-      'description': _descriptionController.text,
-      'imageUrl': imageUrl ?? '', // Ensure the imageUrl is not null
-      'timestamp': Timestamp.fromDate(DateTime.now()),
-      'userId': user!.uid,
-      'location': _location ?? '',
-    };
-
     try {
+      if (_image != null) {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('journal_images')
+            .child('${user!.uid}/${DateTime.now().millisecondsSinceEpoch}');
+
+        final uploadTask = storageRef.putFile(File(_image!.path));
+        final snapshot = await uploadTask;
+
+        if (snapshot.state == TaskState.success) {
+          imageUrl = await snapshot.ref.getDownloadURL();
+        } else {
+          throw Exception('Failed to upload image');
+        }
+      }
+
+      final entryData = {
+        'title': _titleController.text,
+        'description': _descriptionController.text,
+        'imageUrl': imageUrl ?? '',
+        'timestamp': Timestamp.fromDate(DateTime.now()),
+        'userId': user!.uid,
+        'location': _location ?? '',
+      };
+
       if (widget.entryId == null) {
         await FirebaseFirestore.instance
             .collection('journal_entries')
@@ -127,25 +200,20 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
             .update(entryData);
       }
 
-      // Check if the widget is still mounted before calling Navigator.of(context).pop()
       if (mounted) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(); // Dismiss the loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Entry saved successfully')),
+        );
+        Navigator.of(context).pop(); // Return to previous screen
       }
     } catch (e) {
       if (mounted) {
+        Navigator.of(context).pop(); // Dismiss the loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save entry: $e')),
         );
       }
-    }
-    Navigator.of(context).pop();
-
-    // Show success message
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Entry saved successfully')),
-      );
-      Navigator.of(context).pop(); // Return to previous screen
     }
   }
 
