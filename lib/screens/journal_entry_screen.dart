@@ -1,17 +1,16 @@
-// ignore_for_file: library_private_types_in_public_api
-
 import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:latlong2/latlong.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geocoding/geocoding.dart'; // For reverse geocoding
+import 'package:latlong2/latlong.dart';
 import 'map_screen.dart';
 
 class JournalEntryScreen extends StatefulWidget {
   final String? entryId;
-
   const JournalEntryScreen({super.key, this.entryId});
 
   @override
@@ -21,9 +20,10 @@ class JournalEntryScreen extends StatefulWidget {
 class _JournalEntryScreenState extends State<JournalEntryScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _picker = ImagePicker();
+  final ImagePicker _picker = ImagePicker();
   XFile? _image;
-  String? _location;
+  LatLng? _selectedLocation;
+  String? _locationName;
 
   @override
   void initState() {
@@ -42,7 +42,8 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
     _titleController.text = data['title'];
     _descriptionController.text = data['description'];
     _image = XFile(data['imageUrl']);
-    _location = data['location'];
+    _selectedLocation = LatLng(data['latitude'], data['longitude']);
+    _locationName = data['locationName'];
     setState(() {});
   }
 
@@ -57,106 +58,49 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
 
   Future<void> _selectLocation() async {
     final result = await Navigator.of(context).push<Map<String, String>>(
-      MaterialPageRoute(
-        builder: (context) => const MapScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const MapScreen()),
     );
-
     if (result != null) {
+      final coordinates = result['coordinates']!.split(',');
+      _selectedLocation =
+          LatLng(double.parse(coordinates[0]), double.parse(coordinates[1]));
+
+      // Reverse geocoding to get the location name
+      _reverseGeocodeLocation(_selectedLocation!);
+    }
+  }
+
+  // Reverse geocoding to get the location name
+  Future<void> _reverseGeocodeLocation(LatLng point) async {
+    try {
+      List<Placemark> placemarks =
+          await placemarkFromCoordinates(point.latitude, point.longitude);
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        setState(() {
+          _locationName =
+              "${place.locality}, ${place.administrativeArea}, ${place.country}";
+        });
+      } else {
+        setState(() {
+          _locationName = "Unknown location";
+        });
+      }
+    } catch (e) {
+      // Handle and log the error
+      print("Error reverse geocoding: $e");
       setState(() {
-        _location = result['coordinates'];
-        // You can also save the location name if needed
-        // String? locationName = result['name'];
+        _locationName = "Error fetching location name";
       });
     }
   }
 
-  // Future<void> _saveEntry() async {
-  //   // Show loading dialog
-  //   showDialog(
-  //     context: context,
-  //     barrierDismissible: false,
-  //     builder: (BuildContext context) {
-  //       return const Center(
-  //         child: CircularProgressIndicator(),
-  //       );
-  //     },
-  //   );
-  //   final user = FirebaseAuth.instance.currentUser;
-  //   String? imageUrl;
-
-  //   if (_image != null) {
-  //     final storageRef = FirebaseStorage.instance
-  //         .ref()
-  //         .child('journal_images')
-  //         .child('${user!.uid}/${DateTime.now().millisecondsSinceEpoch}');
-
-  //     final uploadTask = storageRef.putFile(File(_image!.path));
-  //     final snapshot = await uploadTask.whenComplete(() => {});
-
-  //     if (snapshot.state == TaskState.success) {
-  //       imageUrl = await snapshot.ref.getDownloadURL();
-  //     } else {
-  //       if (mounted) {
-  //         ScaffoldMessenger.of(context).showSnackBar(
-  //           const SnackBar(content: Text('Failed to upload image')),
-  //         );
-  //       }
-  //       return;
-  //     }
-  //   }
-
-  //   final entryData = {
-  //     'title': _titleController.text,
-  //     'description': _descriptionController.text,
-  //     'imageUrl': imageUrl ?? '', // Ensure the imageUrl is not null
-  //     'timestamp': Timestamp.fromDate(DateTime.now()),
-  //     'userId': user!.uid,
-  //     'location': _location ?? '',
-  //   };
-
-  //   try {
-  //     if (widget.entryId == null) {
-  //       await FirebaseFirestore.instance
-  //           .collection('journal_entries')
-  //           .add(entryData);
-  //     } else {
-  //       await FirebaseFirestore.instance
-  //           .collection('journal_entries')
-  //           .doc(widget.entryId)
-  //           .update(entryData);
-  //     }
-
-  //     // Check if the widget is still mounted before calling Navigator.of(context).pop()
-  //     if (mounted) {
-  //       Navigator.of(context).pop();
-  //     }
-  //   } catch (e) {
-  //     if (mounted) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text('Failed to save entry: $e')),
-  //       );
-  //     }
-  //   }
-  //   Navigator.of(context).pop();
-
-  //   // Show success message
-  //   if (mounted) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text('Entry saved successfully')),
-  //     );
-  //     Navigator.of(context).pop(); // Return to previous screen
-  //   }
-  // }
   Future<void> _saveEntry() async {
-    // Show loading dialog
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
+        return const Center(child: CircularProgressIndicator());
       },
     );
 
@@ -164,12 +108,12 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
     String? imageUrl;
 
     try {
+      // Image upload
       if (_image != null) {
         final storageRef = FirebaseStorage.instance
             .ref()
             .child('journal_images')
             .child('${user!.uid}/${DateTime.now().millisecondsSinceEpoch}');
-
         final uploadTask = storageRef.putFile(File(_image!.path));
         final snapshot = await uploadTask;
 
@@ -180,15 +124,19 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
         }
       }
 
+      // Entry data
       final entryData = {
         'title': _titleController.text,
         'description': _descriptionController.text,
         'imageUrl': imageUrl ?? '',
         'timestamp': Timestamp.fromDate(DateTime.now()),
         'userId': user!.uid,
-        'location': _location ?? '',
+        'latitude': _selectedLocation?.latitude,
+        'longitude': _selectedLocation?.longitude,
+        'locationName': _locationName ?? '',
       };
 
+      // Saving to Firestore
       if (widget.entryId == null) {
         await FirebaseFirestore.instance
             .collection('journal_entries')
@@ -200,8 +148,9 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
             .update(entryData);
       }
 
+      // Dismiss loading dialog and show success message
       if (mounted) {
-        Navigator.of(context).pop(); // Dismiss the loading dialog
+        Navigator.of(context).pop(); // Dismiss loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Entry saved successfully')),
         );
@@ -209,7 +158,7 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
       }
     } catch (e) {
       if (mounted) {
-        Navigator.of(context).pop(); // Dismiss the loading dialog
+        Navigator.of(context).pop(); // Dismiss loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save entry: $e')),
         );
@@ -221,8 +170,7 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.entryId == null ? 'New Entry' : 'Edit Entry'),
-      ),
+          title: Text(widget.entryId == null ? 'New Entry' : 'Edit Entry')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView(
@@ -279,35 +227,27 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _pickImage,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.lightBlue, // Customize the color
-              ),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: Colors.lightBlue),
               child: const Text('Pick Image'),
             ),
             const SizedBox(height: 16),
-            if (_location != null)
-              Text(
-                'Location: $_location',
-                style: const TextStyle(fontSize: 16, color: Colors.green),
-              )
+            if (_locationName != null)
+              Text('Location: $_locationName',
+                  style: const TextStyle(fontSize: 16, color: Colors.green))
             else
-              const Text(
-                'No location selected.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
+              const Text('No location selected.',
+                  style: TextStyle(fontSize: 16, color: Colors.grey)),
             ElevatedButton(
               onPressed: _selectLocation,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.lightBlue, // Customize the color
-              ),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: Colors.lightBlue),
               child: const Text('Select Location'),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _saveEntry,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green, // Customize the color
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
               child: const Text('Save Entry'),
             ),
           ],

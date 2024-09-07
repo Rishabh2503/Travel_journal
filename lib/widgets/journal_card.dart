@@ -66,15 +66,20 @@ class JournalCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
 
-                // Display the location if available
-                if (entry.location != null && entry.location!.isNotEmpty)
+                // Display the location name (if available)
+                if (entry.locationName != null &&
+                    entry.locationName!.isNotEmpty)
                   Row(
                     children: [
                       const Icon(Icons.location_on, color: Colors.green),
                       const SizedBox(width: 4),
-                      Text(
-                        entry.location!,
-                        style: const TextStyle(color: Colors.green),
+                      Expanded(
+                        child: Text(
+                          entry.locationName!,
+                          style: const TextStyle(color: Colors.green),
+                          overflow: TextOverflow
+                              .ellipsis, // Ensure it doesn't overflow
+                        ),
                       ),
                     ],
                   ),

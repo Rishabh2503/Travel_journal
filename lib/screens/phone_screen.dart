@@ -2,8 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:travel/models/user_modal.dart';
-import 'package:travel/screens/home_screen.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:travel/screens/otp_screen.dart';
 
 class PhoneNumberInputScreen extends StatefulWidget {
